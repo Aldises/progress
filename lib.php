@@ -485,6 +485,51 @@ function block_progress_monitorable_modules() {
             ),
             'defaultAction' => 'finished'
         ),
+
+        'groupmanagement' => array(
+            'actions' => array(
+                'viewed' => array (
+                    'logstore_legacy'     => "SELECT id
+                                                FROM {log}
+                                               WHERE course = :courseid
+                                                 AND module = 'groupmanagement'
+                                                 AND action = 'view'
+                                                 AND cmid = :cmid
+                                                 AND userid = :userid",
+                    'sql_internal_reader' => "SELECT id
+                                                FROM {log}
+                                               WHERE courseid = :courseid
+                                                 AND component = 'mod_groupmanagement'
+                                                 AND action = 'viewed'
+                                                 AND objectid = :eventid
+                                                 AND userid = :userid",
+                ),
+                'selected'    => "SELECT id
+                                     FROM {groups_members}
+                                    WHERE userid = :userid AND groupid IN /*(
+                                          SELECT id
+                                            FROM {groups}
+                                           WHERE courseid = :courseid AND id IN*/ (
+                                           SELECT groupid
+                                            FROM {groupmanagement_options}
+                                            WHERE groupmanagementid = :eventid
+                                           )
+                                    )"
+            ),
+            'defaultAction' => 'viewed'
+        ),
+
+        'moodecforum' => array(
+            'actions' => array(
+                'posted_to'    => "SELECT postid
+                                     FROM qa_posts
+                                    WHERE categoryid = :eventid
+                                      AND userid = :userid"
+
+            ),
+            'defaultAction' => 'posted_to'
+        ),
+
         'scorm' => array(
             'actions' => array(
                 'attempted'    => "SELECT id
@@ -772,10 +817,10 @@ function block_progress_attempts($modules, $config, $events, $userid, $course) {
         $module = $modules[$event['type']];
         $uniqueid = $event['type'].$event['id'];
         $parameters = array('courseid' => $course, 'courseid1' => $course,
-                            'userid' => $userid, 'userid1' => $userid,
-                            'eventid' => $event['id'], 'eventid1' => $event['id'],
-                            'cmid' => $event['cm']->id, 'cmid1' => $event['cm']->id,
-                      );
+            'userid' => $userid, 'userid1' => $userid,
+            'eventid' => $event['id'], 'eventid1' => $event['id'],
+            'cmid' => $event['cm']->id, 'cmid1' => $event['cm']->id,
+        );
 
         // Check for passing grades as unattempted, passed or failed.
         if (isset($config->{'action_'.$uniqueid}) && $config->{'action_'.$uniqueid} == 'passed') {
@@ -838,12 +883,12 @@ function block_progress_attempts($modules, $config, $events, $userid, $course) {
             // Determine the set action and develop a query.
             else {
                 $action = isset($config->{'action_'.$uniqueid})?
-                          $config->{'action_'.$uniqueid}:
-                          $module['defaultAction'];
+                    $config->{'action_'.$uniqueid}:
+                    $module['defaultAction'];
                 $query = $module['actions'][$action];
             }
 
-             // Check if the user has attempted the module.
+            // Check if the user has attempted the module.
             $attempts[$uniqueid] = $DB->record_exists_sql($query, $parameters) ? true : false;
         }
     }
@@ -874,8 +919,8 @@ function block_progress_bar($modules, $config, $events, $userid, $instance, $att
     $numevents = count($events);
     $dateformat = get_string('strftimerecentfull', 'langconfig');
     $tableoptions = array('class' => 'progressBarProgressTable',
-                          'cellpadding' => '0',
-                          'cellspacing' => '0');
+        'cellpadding' => '0',
+        'cellspacing' => '0');
 
     // Place now arrow.
     if ((!isset($config->orderby) || $config->orderby == 'orderbytime') && $config->displayNow == 1 && !$simple) {
@@ -894,16 +939,16 @@ function block_progress_bar($modules, $config, $events, $userid, $instance, $att
                 $content .= HTML_WRITER::tag('td', '&nbsp;', array('class' => 'progressBarHeader'));
             }
             $celloptions = array('colspan' => $numevents - $nowpos,
-                                 'class' => 'progressBarHeader',
-                                 'style' => 'text-align:left;');
+                'class' => 'progressBarHeader',
+                'style' => 'text-align:left;');
             $content .= HTML_WRITER::start_tag('td', $celloptions);
             $content .= $OUTPUT->pix_icon('left', $nowstring, 'block_progress');
             $content .= $nowstring;
             $content .= HTML_WRITER::end_tag('td');
         } else {
             $celloptions = array('colspan' => $nowpos,
-                                 'class' => 'progressBarHeader',
-                                 'style' => 'text-align:right;');
+                'class' => 'progressBarHeader',
+                'style' => 'text-align:right;');
             $content .= HTML_WRITER::start_tag('td', $celloptions);
             $content .= $nowstring;
             $content .= $OUTPUT->pix_icon('right', $nowstring, 'block_progress');
@@ -926,8 +971,8 @@ function block_progress_bar($modules, $config, $events, $userid, $instance, $att
     foreach ($events as $event) {
         $attempted = $attempts[$event['type'].$event['id']];
         $action = isset($config->{'action_'.$event['type'].$event['id']})?
-                  $config->{'action_'.$event['type'].$event['id']}:
-                  $modules[$event['type']]['defaultAction'];
+            $config->{'action_'.$event['type'].$event['id']}:
+            $modules[$event['type']]['defaultAction'];
 
         // A cell in the progress bar.
         $celloptions = array(
@@ -935,19 +980,19 @@ function block_progress_bar($modules, $config, $events, $userid, $instance, $att
             'id' => '',
             'width' => $width.'%',
             'onmouseover' => 'M.block_progress.showInfo('.$instance.','.$userid.','.$event['cm']->id.');',
-             'style' => 'background-color:');
+            'style' => 'background-color:');
         if ($attempted === true) {
             $celloptions['style'] .= get_config('block_progress', 'attempted_colour').';';
             $cellcontent = $OUTPUT->pix_icon(
-                               isset($config->progressBarIcons) && $config->progressBarIcons == 1 ?
-                               'tick' : 'blank', '', 'block_progress');
+                isset($config->progressBarIcons) && $config->progressBarIcons == 1 ?
+                    'tick' : 'blank', '', 'block_progress');
         }
         else if (((!isset($config->orderby) || $config->orderby == 'orderbytime') && $event['expected'] < $now) ||
-                 ($attempted === 'failed')) {
+            ($attempted === 'failed')) {
             $celloptions['style'] .= get_config('block_progress', 'notattempted_colour').';';
             $cellcontent = $OUTPUT->pix_icon(
-                               isset($config->progressBarIcons) && $config->progressBarIcons == 1 ?
-                               'cross':'blank', '', 'block_progress');
+                isset($config->progressBarIcons) && $config->progressBarIcons == 1 ?
+                    'cross':'blank', '', 'block_progress');
         }
         else {
             $celloptions['style'] .= get_config('block_progress', 'futurenotattempted_colour').';';
@@ -971,7 +1016,7 @@ function block_progress_bar($modules, $config, $events, $userid, $instance, $att
 
     // Add the info box below the table.
     $divoptions = array('class' => 'progressEventInfo',
-                        'id' => 'progressBarInfo'.$instance.'-'.$userid.'-info');
+        'id' => 'progressBarInfo'.$instance.'-'.$userid.'-info');
     $content .= HTML_WRITER::start_tag('div', $divoptions);
     if (!$simple) {
         if (isset($config->showpercentage) && $config->showpercentage == 1) {
@@ -985,15 +1030,15 @@ function block_progress_bar($modules, $config, $events, $userid, $instance, $att
 
     // Add hidden divs for activity information.
     $displaydate = (!isset($config->orderby) || $config->orderby == 'orderbytime') &&
-                   (!isset($config->displayNow) || $config->displayNow == 1);
+        (!isset($config->displayNow) || $config->displayNow == 1);
     foreach ($events as $event) {
         $attempted = $attempts[$event['type'].$event['id']];
         $action = isset($config->{'action_'.$event['type'].$event['id']})?
-                  $config->{'action_'.$event['type'].$event['id']}:
-                  $modules[$event['type']]['defaultAction'];
+            $config->{'action_'.$event['type'].$event['id']}:
+            $modules[$event['type']]['defaultAction'];
         $divoptions = array('class' => 'progressEventInfo',
-                            'id' => 'progressBarInfo'.$instance.'-'.$userid.'-'.$event['cm']->id,
-                            'style' => 'display: none;');
+            'id' => 'progressBarInfo'.$instance.'-'.$userid.'-'.$event['cm']->id,
+            'style' => 'display: none;');
         $content .= HTML_WRITER::start_tag('div', $divoptions);
         $link = '/mod/'.$event['type'].'/view.php?id='.$event['cm']->id;
         $text = $OUTPUT->pix_icon('icon', '', $event['type'], array('class' => 'moduleIcon')).s($event['name']);

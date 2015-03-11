@@ -70,6 +70,13 @@ $string['responded_to'] = 'responded to';
 $string['submitted'] = 'submitted';
 $string['viewed'] = 'viewed';
 
+// Added Element for Moodec
+$string['selected'] = 'selected';
+$string['groupmanagement'] = 'Group Management';
+$string['moodecforum'] = 'Moodec Forum';
+
+
+
 // Stings for the Config page.
 $string['config_default_title'] = 'Progress Bar';
 $string['config_header_action'] = 'Action';
