@@ -62,6 +62,9 @@
  *
  * @return array
  */
+
+require_once(dirname(__FILE__) . '../../../lib/gradelib.php');
+
 function block_progress_monitorable_modules() {
     global $DB;
 
@@ -914,7 +917,7 @@ function block_progress_attempts($modules, $config, $events, $userid, $course) {
  * @return string  Progress Bar HTML content
  */
 function block_progress_bar($modules, $config, $events, $userid, $instance, $attempts, $course, $simple = false) {
-    global $OUTPUT, $CFG;
+    global $OUTPUT, $CFG, $DB;
     $now = time();
     $numevents = count($events);
     $dateformat = get_string('strftimerecentfull', 'langconfig');
