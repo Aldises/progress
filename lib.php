@@ -1048,6 +1048,36 @@ function block_progress_bar($modules, $config, $events, $userid, $instance, $att
             $content .= $text;
         }
         $content .= HTML_WRITER::empty_tag('br');
+
+        // Add Grade
+
+        // Check if activity can have a grade
+        if($DB->record_exists_sql("SELECT id FROM {grade_items} WHERE courseid=".$course." AND itemmodule='".$event['type'] ."' AND iteminstance=".$event['id'])) {
+            $content .= HTML_WRITER::start_tag('div');
+
+            // Get itemid
+            $query = "SELECT id FROM {grade_items} WHERE courseid=".$course." AND itemmodule='".$event['type'] ."' AND iteminstance=".$event['id'] ;
+
+            $itemid = $DB->get_fieldset_sql($query) ;
+
+            // Get user marks
+            $querymarks = "SELECT rawgrade FROM {grade_grades} WHERE itemid =".$itemid[0] ." AND userid=".$userid ;
+            $grades = $DB->get_fieldset_sql($querymarks) ;
+
+            // Get max marks
+            $querymarksmax = "SELECT rawgrademax FROM {grade_grades} WHERE itemid =".$itemid[0] ." AND userid=".$userid ;
+            $gradesMax = $DB->get_fieldset_sql($querymarksmax) ;
+
+            if(!isset($grades[0])|| !isset($gradesMax[0])){
+                $content .= "Grade : wait for it";
+            }else {
+                $content .= "Grade : ".number_format($grades[0], 2, '.', '')."/".number_format($gradesMax[0], 2, '.', '');
+            }
+
+            $content .= HTML_WRITER::end_tag('div');
+        }
+
+
         $content .= get_string($action, 'block_progress').'&nbsp;';
         $icon = ($attempted && $attempted !== 'failed' ? 'tick' : 'cross');
         $content .= $OUTPUT->pix_icon($icon, '', 'block_progress');
