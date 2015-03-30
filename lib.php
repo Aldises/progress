@@ -62,6 +62,8 @@
  *
  * @return array
  */
+require_once(dirname(__FILE__) . '../../../lib/gradelib.php');
+
 function block_progress_monitorable_modules() {
     global $DB;
 
@@ -485,6 +487,52 @@ function block_progress_monitorable_modules() {
             ),
             'defaultAction' => 'finished'
         ),
+
+        'groupmanagement' => array(
+            'actions' => array(
+                'viewed' => array (
+                    'logstore_legacy'     => "SELECT id
+                                                FROM {log}
+                                               WHERE course = :courseid
+                                                 AND module = 'groupmanagement'
+                                                 AND action = 'view'
+                                                 AND cmid = :cmid
+                                                 AND userid = :userid",
+                    'sql_internal_reader' => "SELECT id
+                                                FROM {log}
+                                               WHERE courseid = :courseid
+                                                 AND component = 'mod_groupmanagement'
+                                                 AND action = 'viewed'
+                                                 AND objectid = :eventid
+                                                 AND userid = :userid",
+                ),
+                'selected'    => "SELECT id
+                                     FROM {groups_members}
+                                    WHERE userid = :userid AND groupid IN (
+                                          SELECT id
+                                            FROM {groups}
+                                           WHERE courseid = :courseid AND id IN (
+                                           SELECT groupid
+                                            FROM {groupmanagement_options}
+                                            WHERE groupmanagementid = :eventid
+                                           )
+                                    )"
+            ),
+            'defaultAction' => 'viewed'
+        ),
+
+        'moodecforum' => array(
+            'actions' => array(
+                    'posted_to'    => "SELECT postid
+                                     FROM qa_posts
+                                    WHERE categoryid = :eventid
+                                      AND userid = :userid"
+
+            ),
+            'defaultAction' => 'posted_to'
+        ),
+
+
         'scorm' => array(
             'actions' => array(
                 'attempted'    => "SELECT id
@@ -869,7 +917,7 @@ function block_progress_attempts($modules, $config, $events, $userid, $course) {
  * @return string  Progress Bar HTML content
  */
 function block_progress_bar($modules, $config, $events, $userid, $instance, $attempts, $course, $simple = false) {
-    global $OUTPUT, $CFG;
+    global $OUTPUT, $CFG, $DB;
     $now = time();
     $numevents = count($events);
     $dateformat = get_string('strftimerecentfull', 'langconfig');
@@ -923,6 +971,7 @@ function block_progress_bar($modules, $config, $events, $userid, $instance, $att
     $width = 100 / $numevents;
     $content .= HTML_WRITER::start_tag('tr');
     $counter = 1;
+
     foreach ($events as $event) {
         $attempted = $attempts[$event['type'].$event['id']];
         $action = isset($config->{'action_'.$event['type'].$event['id']})?
@@ -942,6 +991,7 @@ function block_progress_bar($modules, $config, $events, $userid, $instance, $att
                                isset($config->progressBarIcons) && $config->progressBarIcons == 1 ?
                                'tick' : 'blank', '', 'block_progress');
         }
+
         else if (((!isset($config->orderby) || $config->orderby == 'orderbytime') && $event['expected'] < $now) ||
                  ($attempted === 'failed')) {
             $celloptions['style'] .= get_config('block_progress', 'notattempted_colour').';';
@@ -1003,9 +1053,22 @@ function block_progress_bar($modules, $config, $events, $userid, $instance, $att
             $content .= $text;
         }
         $content .= HTML_WRITER::empty_tag('br');
+
+
+
+
+
+
         $content .= get_string($action, 'block_progress').'&nbsp;';
         $icon = ($attempted && $attempted !== 'failed' ? 'tick' : 'cross');
         $content .= $OUTPUT->pix_icon($icon, '', 'block_progress');
+
+        // Add Grade
+
+        if($config->showgrade == 1){
+            $content.= get_grade($event, $course, $DB, $userid);
+        }
+
         $content .= HTML_WRITER::empty_tag('br');
         if ($displaydate) {
             $content .= HTML_WRITER::start_tag('div', array('class' => 'expectedBy'));
@@ -1026,6 +1089,68 @@ function block_progress_bar($modules, $config, $events, $userid, $instance, $att
  * @param array $attempts The user's attempts on course activities
  * @return int  Progress value as a percentage
  */
+function get_grade($event, $course, $DB, $userid) {
+
+    $content = "" ;
+
+    // Check if the event in the activity list
+    if(strcmp($event['type'],"assign")==0 ||strcmp($event['type'],"questionnaire") == 0
+        ||strcmp($event['type'],"lesson") == 0 ||strcmp($event['type'],"quiz") == 0
+        ||strcmp($event['type'],"workshop") == 0 ||strcmp($event['type'],"scorm") == 0){
+
+        // Parameters
+        $param = array($course, $event['type'], $event['id']);
+        // Check if activity can have a grade
+        if($DB->record_exists_sql("SELECT id FROM {grade_items} WHERE courseid= ? AND itemmodule= ? AND iteminstance= ?", $param)) {
+            $content .= HTML_WRITER::start_tag('div');
+
+            // Check if there's is a scale or only a grade
+            $query = "SELECT scaleid FROM {grade_items} WHERE courseid= ? AND itemmodule= ? AND iteminstance= ?" ;
+            $scaleid = $DB->get_fieldset_sql($query, $param) ;
+
+            if(!isset($scaleid[0])) { // Go on only with no scale
+
+                // Get itemid
+                $query = "SELECT id FROM {grade_items} WHERE courseid= ? AND itemmodule= ? AND iteminstance= ?";
+                $itemid = $DB->get_fieldset_sql($query, $param);
+
+                // Get user marks
+                $querymarks = "SELECT id, itemid, rawgrademax ,finalgrade FROM {grade_grades} WHERE itemid = ? AND userid= ? ";
+
+
+                for( $j=0 ; $j<count($itemid) ; $j++) {
+                    echo($itemid[$j]);
+
+                    $param = array($itemid[$j], $userid); // Changing the parameters
+
+                    $grades = $DB->get_records_sql($querymarks, $param);
+
+                    foreach ($grades as $grade) {
+                        $i = 0 ;
+                        $mark[$i] = $grades[$grade->id];
+                        $mark[$i]->itemid = $grade->itemid;
+                        $mark[$i]->rawgrademax = $grade->rawgrademax;
+                        $mark[$i]->finalgrade = $grade->finalgrade;
+                    }
+
+                    if (!isset($mark[0]->finalgrade) || !isset($mark[0]->rawgrademax)) {
+                        // No content added
+                    } else {
+
+                        $content .= number_format($mark[0]->finalgrade, 2, '.', '') . "/" . number_format($mark[0]->rawgrademax, 2, '.', '') ;
+                        $content .=HTML_WRITER::empty_tag('br');
+                    }
+                }
+            }
+            $content .= HTML_WRITER::end_tag('div');
+
+        }
+    }
+    return $content ;
+
+}
+
+
 function block_progress_percentage($events, $attempts) {
     $attemptcount = 0;
 

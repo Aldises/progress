@@ -70,6 +70,11 @@ $string['responded_to'] = 'responded to';
 $string['submitted'] = 'submitted';
 $string['viewed'] = 'viewed';
 
+// Added Element for Moodec
+$string['selected'] = 'selected';
+$string['groupmanagement'] = 'Group Management';
+$string['moodecforum'] = 'Moodec Forum';
+
 // Stings for the Config page.
 $string['config_default_title'] = 'Progress Bar';
 $string['config_header_action'] = 'Action';
@@ -84,6 +89,7 @@ $string['config_title'] = 'Alternate title';
 $string['config_orderby'] = 'Order bar items by';
 $string['config_orderby_due_time'] = '"Expected by" date-time';
 $string['config_orderby_course_order'] = 'Ordering in course';
+$string['config_showgrade'] = "Show grades" ;
 
 // Help strings.
 $string['why_set_the_title'] = 'Why you might want to set the block instance title?';
@@ -131,11 +137,20 @@ $string['what_actions_can_be_monitored_help'] = '
 <p>For the assignment and quiz modules, the notion of passed relies on a "Grade to pass" being set for the grade item in the Gradebook. <a href="http://docs.moodle.org/en/Grade_items#Activity-based_grade_items" target="_blank">More help...</a></p>
 ';
 $string['why_show_precentage'] = 'Why show a progress percentage to students?';
+
+
 $string['why_show_precentage_help'] = '
 <p>It is possible to show an overall percentage of progress to students.</p>
 <p>This is calculated as the number of items complete divided by the total number of items in the bar.</p>
 <p>The progress percentage appears until the student mouses over an item in the bar.</p>
 ';
+
+$string['why_show_grade'] = 'Why show grades percentage to students?';
+$string['why_show_grade_help'] = '
+<p>It is possible tho show the grade of a student for an activity.</p>
+
+';
+
 $string['how_ordering_works'] = 'How ordering works';
 $string['how_ordering_works_help'] = '
 <p>There are two ways items in the Progress Bar can be ordered.</p>
