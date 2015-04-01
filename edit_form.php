@@ -92,6 +92,13 @@ class block_progress_edit_form extends block_edit_form {
         $mform->setDefault('config_showpercentage', 0);
         $mform->addHelpButton('config_showpercentage', 'why_show_precentage', 'block_progress');
 
+        // Allow Grade to be turned on for students.
+        $mform->addElement('selectyesno', 'config_showgrade',
+            get_string('config_showgrade', 'block_progress'));
+        $mform->setDefault('config_showgrade', 0);
+        $mform->addHelpButton('config_showgrade', 'why_show_grade', 'block_progress');
+
+
         // Get course section information.
         $sections = block_progress_course_sections($COURSE->id);
 

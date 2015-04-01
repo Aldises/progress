@@ -26,6 +26,7 @@
 
 // Include required files.
 require_once(dirname(__FILE__) . '/../../config.php');
+
 require_once($CFG->dirroot.'/blocks/progress/lib.php');
 require_once($CFG->libdir.'/tablelib.php');
 
