@@ -1092,64 +1092,94 @@ function block_progress_bar($modules, $config, $events, $userid, $instance, $att
 function get_grade($event, $course, $DB, $userid) {
 
     $content = "" ;
+    $commentWorkshop = array() ;
+    $commentWorkshop[0] =  get_string('workshopSubmission', 'block_progress') ;
+    $commentWorkshop[1] = get_string('workshopAssessment', 'block_progress') ;
 
-    // Check if the event in the activity list
-    if(strcmp($event['type'],"assign")==0 ||strcmp($event['type'],"questionnaire") == 0
-        ||strcmp($event['type'],"lesson") == 0 ||strcmp($event['type'],"quiz") == 0
-        ||strcmp($event['type'],"workshop") == 0 ||strcmp($event['type'],"scorm") == 0){
-
-        // Parameters
-        $param = array($course, $event['type'], $event['id']);
-        // Check if activity can have a grade
-        if($DB->record_exists_sql("SELECT id FROM {grade_items} WHERE courseid= ? AND itemmodule= ? AND iteminstance= ?", $param)) {
-            $content .= HTML_WRITER::start_tag('div');
-
-            // Check if there's is a scale or only a grade
-            $query = "SELECT scaleid FROM {grade_items} WHERE courseid= ? AND itemmodule= ? AND iteminstance= ?" ;
-            $scaleid = $DB->get_fieldset_sql($query, $param) ;
-
-            if(!isset($scaleid[0])) { // Go on only with no scale
-
-                // Get itemid
-                $query = "SELECT id FROM {grade_items} WHERE courseid= ? AND itemmodule= ? AND iteminstance= ?";
-                $itemid = $DB->get_fieldset_sql($query, $param);
-
-                // Get user marks
-                $querymarks = "SELECT id, itemid, rawgrademax ,finalgrade FROM {grade_grades} WHERE itemid = ? AND userid= ? ";
+    // Parameters
+    $param = array($course, $event['type'], $event['id']);
+    // Check if activity can have a grade
+    if($DB->record_exists_sql("SELECT id FROM {grade_items} WHERE courseid= ? AND itemmodule= ? AND iteminstance= ?", $param)) {
+        $content .= HTML_WRITER::start_tag('div');
 
 
-                for( $j=0 ; $j<count($itemid) ; $j++) {
-                    echo($itemid[$j]);
 
-                    $param = array($itemid[$j], $userid); // Changing the parameters
+        // Get itemid
+        $query = "SELECT id FROM {grade_items} WHERE courseid= ? AND itemmodule= ? AND iteminstance= ?";
+        $itemid = $DB->get_fieldset_sql($query, $param);
 
-                    $grades = $DB->get_records_sql($querymarks, $param);
+        // Get user marks
+        $querymarks = "SELECT id, itemid, rawgrademax ,finalgrade, excluded FROM {grade_grades} WHERE itemid = ? AND userid= ? ";
 
-                    foreach ($grades as $grade) {
-                        $i = 0 ;
-                        $mark[$i] = $grades[$grade->id];
-                        $mark[$i]->itemid = $grade->itemid;
-                        $mark[$i]->rawgrademax = $grade->rawgrademax;
-                        $mark[$i]->finalgrade = $grade->finalgrade;
-                    }
+        // Check if there's is a scale or only a grade
+        $query = "SELECT scaleid FROM {grade_items} WHERE courseid= ? AND itemmodule= ? AND iteminstance= ?" ;
+        $scaleid = $DB->get_fieldset_sql($query, $param) ;
 
-                    if (!isset($mark[0]->finalgrade) || !isset($mark[0]->rawgrademax)) {
-                        // No content added
+        if(isset($scaleid)){ // if Scale get the scaleElement
+            $scaleElement = get_scale_element($scaleid[0], $DB) ;
+        }
+
+
+        for( $j=0 ; $j<count($itemid) ; $j++) {
+
+
+            $param = array($itemid[$j], $userid); // Changing the parameters
+
+            $grades = $DB->get_records_sql($querymarks, $param);
+
+            foreach ($grades as $grade) {
+                $i = 0 ;
+                $mark[$i] = $grades[$grade->id];
+                $mark[$i]->itemid = $grade->itemid;
+                $mark[$i]->rawgrademax = $grade->rawgrademax;
+                $mark[$i]->finalgrade = $grade->finalgrade;
+                $mark[$i]->excluded = $grade->excluded;
+            }
+
+            if (!isset($mark[0]->finalgrade) || !isset($mark[0]->rawgrademax)) {
+                // No content added
+            } else {
+
+                if(isset($scaleid[0])) {
+                    $content .= get_string('apppreciation', 'block_progress') . $scaleElement[$mark[0]->finalgrade-1] ; // do -1 to match the explode table of the scale and the index of the mark
+                }else {
+
+                    if ($event['type'] == "workshop") { // Add comment to the grade for workshop
+                        $content .= $commentWorkshop[$j] . number_format($mark[0]->finalgrade, 2, '.', '') . "/" . number_format($mark[0]->rawgrademax, 2, '.', '');
                     } else {
-
-                        $content .= number_format($mark[0]->finalgrade, 2, '.', '') . "/" . number_format($mark[0]->rawgrademax, 2, '.', '') ;
-                        $content .=HTML_WRITER::empty_tag('br');
+                        $content .= number_format($mark[0]->finalgrade, 2, '.', '') . "/" . number_format($mark[0]->rawgrademax, 2, '.', '');
                     }
                 }
+                if($mark[0]->excluded > 0){ // Check if the grade is excluded from the average and notify the student
+                    $content .= get_string('excludedGrade', 'block_progress');
+                }
+                $content .= HTML_WRITER::empty_tag('br');
             }
-            $content .= HTML_WRITER::end_tag('div');
-
         }
+
+        $content .= HTML_WRITER::end_tag('div');
+
     }
+
     return $content ;
 
 }
+function get_scale_element($scaleid, $DB) {
 
+    // Get scale element
+    $param = array($scaleid);
+
+    $query = "SELECT scale FROM {scale} WHERE id= ?"; // Select Scale
+    $scale = $DB->get_fieldset_sql($query, $param);
+
+    $scale = $scale[0]; // Get first Element (The string)
+
+    $scaleElement = explode(",",$scale) ; // explode by ,
+
+    return $scaleElement ;
+
+
+}
 
 function block_progress_percentage($events, $attempts) {
     $attemptcount = 0;
